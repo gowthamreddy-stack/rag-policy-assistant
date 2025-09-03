@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
+from langchain_community.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 import asyncio
 
 # --- Fix event loop issue for Streamlit ---
@@ -19,16 +21,28 @@ GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GOOGLE_API_KEY:
     raise ValueError("❌ GEMINI_API_KEY not found in .env file")
 
-# --- Setup embeddings (needed for retrieval) ---
+# --- Setup embeddings ---
 embeddings = GoogleGenerativeAIEmbeddings(
     model="models/embedding-001",
     google_api_key=GOOGLE_API_KEY
 )
 
-# --- Load persisted Chroma DB ---
-db = Chroma(
-    persist_directory="chroma_db"
-)
+# --- Load and split company policies ---
+docs = []
+if os.path.exists("company_policies"):
+    for file in os.listdir("company_policies"):
+        if file.endswith(".md"):
+            loader = TextLoader(os.path.join("company_policies", file))
+            docs.extend(loader.load())
+
+if not docs:
+    raise ValueError("❌ No documents found in company_policies folder!")
+
+splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+chunks = splitter.split_documents(docs)
+
+# --- Create in-memory Chroma DB ---
+db = Chroma.from_documents(chunks, embedding_function=embeddings)
 
 # --- Setup LLM ---
 llm = ChatGoogleGenerativeAI(
@@ -36,7 +50,7 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=GOOGLE_API_KEY
 )
 
-# --- Setup retriever & QA chain ---
+# --- Setup retriever & QA ---
 retriever = db.as_retriever(search_kwargs={"k": 3})
 qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
@@ -45,7 +59,7 @@ st.set_page_config(page_title="Company Policy Assistant", page_icon="🏢", layo
 
 # Sidebar
 with st.sidebar:
-    st.image("https://img.icons8.com/office/80/organization.png", width=80)
+    st.image("https://img.icons8.com/office/80/organization.png", width=80)  
     st.markdown("## 🏢 Company Policy Assistant")
     st.markdown("Ask questions about your company's policies (HR, IT, Expenses, etc.)")
     st.markdown("---")
@@ -60,7 +74,7 @@ with st.sidebar:
 st.title("💬 Company Policy Assistant")
 st.write("Your AI assistant for quick answers about company policies.")
 
-# --- Chat interface ---
+# --- Chat Interface ---
 if "history" not in st.session_state:
     st.session_state.history = []
 
@@ -76,7 +90,3 @@ for chat in st.session_state.history:
         st.markdown(chat["question"])
     with st.chat_message("assistant"):
         st.markdown(chat["answer"])
-
-
-
-
