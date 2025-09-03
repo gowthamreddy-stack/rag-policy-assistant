@@ -1,42 +1,63 @@
 import os
 import streamlit as st
+from dotenv import load_dotenv
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
+from langchain_community.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 import asyncio
 
-
+# --- Fix event loop issue for Streamlit ---
 try:
     asyncio.get_running_loop()
 except RuntimeError:
     asyncio.set_event_loop(asyncio.new_event_loop())
 
+# --- Load environment variables ---
+load_dotenv()
+GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 
-GOOGLE_API_KEY = os.environ.get("GEMINI_API_KEY")
 if not GOOGLE_API_KEY:
-    raise ValueError("❌ GEMINI_API_KEY not found. Add it to Streamlit Secrets or your environment variables.")
+    raise ValueError("❌ GEMINI_API_KEY not found in .env file")
 
-
+# --- Setup embeddings ---
 embeddings = GoogleGenerativeAIEmbeddings(
     model="models/embedding-001",
     google_api_key=GOOGLE_API_KEY
 )
-db = Chroma.from_documents([], embedding_function=embeddings)
 
+# --- Load and split company policies ---
+docs = []
+if os.path.exists("company_policies"):
+    for file in os.listdir("company_policies"):
+        if file.endswith(".md"):
+            loader = TextLoader(os.path.join("company_policies", file))
+            docs.extend(loader.load())
 
+if not docs:
+    raise ValueError("❌ No documents found in company_policies folder!")
+
+splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+chunks = splitter.split_documents(docs)
+
+# --- Create in-memory Chroma DB ---
+db = Chroma.from_documents(chunks, embedding_function=embeddings)
+
+# --- Setup LLM ---
 llm = ChatGoogleGenerativeAI(
     model="gemini-1.5-flash",
     google_api_key=GOOGLE_API_KEY
 )
 
-
+# --- Setup retriever & QA ---
 retriever = db.as_retriever(search_kwargs={"k": 3})
 qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
-
+# --- Streamlit UI ---
 st.set_page_config(page_title="Company Policy Assistant", page_icon="🏢", layout="wide")
 
-
+# Sidebar
 with st.sidebar:
     st.image("https://img.icons8.com/office/80/organization.png", width=80)  
     st.markdown("## 🏢 Company Policy Assistant")
@@ -44,21 +65,22 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("**Instructions:**\n1. Type a question below\n2. Get instant AI-powered answers\n3. Use for HR, IT, PTO, Expense & Remote work queries")
 
-
+# Title
 st.title("💬 Company Policy Assistant")
 st.write("Your AI assistant for quick answers about company policies.")
 
-
+# --- Chat Interface ---
 if "history" not in st.session_state:
     st.session_state.history = []
 
 query = st.chat_input("Ask a question about company policies...")
 
 if query:
+    # Get answer from QA system
     answer = qa.run(query)
     st.session_state.history.append({"question": query, "answer": answer})
 
-
+# Display chat history
 for chat in st.session_state.history:
     with st.chat_message("user"):
         st.markdown(chat["question"])
