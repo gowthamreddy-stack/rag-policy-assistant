@@ -1,6 +1,5 @@
 import os
 import streamlit as st
-from dotenv import load_dotenv
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
@@ -12,12 +11,10 @@ try:
 except RuntimeError:
     asyncio.set_event_loop(asyncio.new_event_loop())
 
-# --- Load environment variables ---
-load_dotenv()
-GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
-
+# --- Load API key from environment variables (Streamlit Secrets or system) ---
+GOOGLE_API_KEY = os.environ.get("GEMINI_API_KEY")
 if not GOOGLE_API_KEY:
-    raise ValueError("❌ GEMINI_API_KEY not found in .env file")
+    raise ValueError("❌ GEMINI_API_KEY not found. Add it to Streamlit Secrets or your environment variables.")
 
 # --- Setup embeddings & vectorstore ---
 embeddings = GoogleGenerativeAIEmbeddings(
@@ -58,7 +55,6 @@ if "history" not in st.session_state:
 query = st.chat_input("Ask a question about company policies...")
 
 if query:
-    # Get answer from QA system
     answer = qa.run(query)
     st.session_state.history.append({"question": query, "answer": answer})
 
@@ -68,4 +64,5 @@ for chat in st.session_state.history:
         st.markdown(chat["question"])
     with st.chat_message("assistant"):
         st.markdown(chat["answer"])
+
 
