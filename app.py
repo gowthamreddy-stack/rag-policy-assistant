@@ -19,16 +19,15 @@ GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GOOGLE_API_KEY:
     raise ValueError("❌ GEMINI_API_KEY not found in .env file")
 
-# --- Setup embeddings ---
+# --- Setup embeddings (needed for retrieval) ---
 embeddings = GoogleGenerativeAIEmbeddings(
     model="models/embedding-001",
     google_api_key=GOOGLE_API_KEY
 )
 
-# --- Load persisted Chroma DB (from ingest.py) ---
+# --- Load persisted Chroma DB ---
 db = Chroma(
-    persist_directory="chroma_db",
-    embedding_function=embeddings
+    persist_directory="chroma_db"
 )
 
 # --- Setup LLM ---
@@ -37,7 +36,7 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=GOOGLE_API_KEY
 )
 
-# --- Setup retriever & QA ---
+# --- Setup retriever & QA chain ---
 retriever = db.as_retriever(search_kwargs={"k": 3})
 qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
@@ -46,24 +45,28 @@ st.set_page_config(page_title="Company Policy Assistant", page_icon="🏢", layo
 
 # Sidebar
 with st.sidebar:
-    st.image("https://img.icons8.com/office/80/organization.png", width=80)  
+    st.image("https://img.icons8.com/office/80/organization.png", width=80)
     st.markdown("## 🏢 Company Policy Assistant")
     st.markdown("Ask questions about your company's policies (HR, IT, Expenses, etc.)")
     st.markdown("---")
-    st.markdown("**Instructions:**\n1. Type a question below\n2. Get instant AI-powered answers\n3. Use for HR, IT, PTO, Expense & Remote work queries")
+    st.markdown(
+        "**Instructions:**\n"
+        "1. Type a question below\n"
+        "2. Get instant AI-powered answers\n"
+        "3. Use for HR, IT, PTO, Expense & Remote work queries"
+    )
 
 # Title
 st.title("💬 Company Policy Assistant")
 st.write("Your AI assistant for quick answers about company policies.")
 
-# --- Chat Interface ---
+# --- Chat interface ---
 if "history" not in st.session_state:
     st.session_state.history = []
 
 query = st.chat_input("Ask a question about company policies...")
 
 if query:
-    # Get answer from QA system
     answer = qa.run(query)
     st.session_state.history.append({"question": query, "answer": answer})
 
@@ -73,6 +76,7 @@ for chat in st.session_state.history:
         st.markdown(chat["question"])
     with st.chat_message("assistant"):
         st.markdown(chat["answer"])
+
 
 
 
