@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
-from langchain_community.document_loaders import TextLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 import asyncio
 
 # --- Fix event loop issue for Streamlit ---
@@ -27,22 +25,11 @@ embeddings = GoogleGenerativeAIEmbeddings(
     google_api_key=GOOGLE_API_KEY
 )
 
-# --- Load and split company policies ---
-docs = []
-if os.path.exists("company_policies"):
-    for file in os.listdir("company_policies"):
-        if file.endswith(".md"):
-            loader = TextLoader(os.path.join("company_policies", file))
-            docs.extend(loader.load())
-
-if not docs:
-    raise ValueError("❌ No documents found in company_policies folder!")
-
-splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-chunks = splitter.split_documents(docs)
-
-# --- Create in-memory Chroma DB ---
-db = Chroma.from_documents(chunks, embedding_function=embeddings)
+# --- Load persisted Chroma DB (from ingest.py) ---
+db = Chroma(
+    persist_directory="chroma_db",
+    embedding_function=embeddings
+)
 
 # --- Setup LLM ---
 llm = ChatGoogleGenerativeAI(
@@ -86,5 +73,6 @@ for chat in st.session_state.history:
         st.markdown(chat["question"])
     with st.chat_message("assistant"):
         st.markdown(chat["answer"])
+
 
 
