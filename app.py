@@ -5,38 +5,38 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 from langchain.chains import RetrievalQA
 import asyncio
 
-# --- Fix event loop issue for Streamlit ---
+
 try:
     asyncio.get_running_loop()
 except RuntimeError:
     asyncio.set_event_loop(asyncio.new_event_loop())
 
-# --- Load API key from environment variables (Streamlit Secrets or system) ---
+
 GOOGLE_API_KEY = os.environ.get("GEMINI_API_KEY")
 if not GOOGLE_API_KEY:
     raise ValueError("❌ GEMINI_API_KEY not found. Add it to Streamlit Secrets or your environment variables.")
 
-# --- Setup embeddings & vectorstore ---
+
 embeddings = GoogleGenerativeAIEmbeddings(
     model="models/embedding-001",
     google_api_key=GOOGLE_API_KEY
 )
-db = Chroma(persist_directory="chroma_db", embedding_function=embeddings)
+db = Chroma.from_documents([], embedding_function=embeddings)
 
-# --- Setup LLM ---
+
 llm = ChatGoogleGenerativeAI(
     model="gemini-1.5-flash",
     google_api_key=GOOGLE_API_KEY
 )
 
-# --- Setup retriever & QA ---
+
 retriever = db.as_retriever(search_kwargs={"k": 3})
 qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
-# --- Streamlit UI ---
+
 st.set_page_config(page_title="Company Policy Assistant", page_icon="🏢", layout="wide")
 
-# Sidebar
+
 with st.sidebar:
     st.image("https://img.icons8.com/office/80/organization.png", width=80)  
     st.markdown("## 🏢 Company Policy Assistant")
@@ -44,11 +44,11 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("**Instructions:**\n1. Type a question below\n2. Get instant AI-powered answers\n3. Use for HR, IT, PTO, Expense & Remote work queries")
 
-# Title
+
 st.title("💬 Company Policy Assistant")
 st.write("Your AI assistant for quick answers about company policies.")
 
-# --- Chat Interface ---
+
 if "history" not in st.session_state:
     st.session_state.history = []
 
@@ -58,7 +58,7 @@ if query:
     answer = qa.run(query)
     st.session_state.history.append({"question": query, "answer": answer})
 
-# Display chat history
+
 for chat in st.session_state.history:
     with st.chat_message("user"):
         st.markdown(chat["question"])
