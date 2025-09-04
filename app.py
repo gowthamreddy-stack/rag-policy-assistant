@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
+from chromadb.config import Settings
 import asyncio
 
 # --- Fix event loop issue for Streamlit ---
@@ -17,7 +18,7 @@ load_dotenv()
 GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GOOGLE_API_KEY:
-    raise ValueError("❌ GEMINI_API_KEY not found in .env file")
+    raise ValueError("❌ GEMINI_API_KEY not found. Add it in .env (local) or secrets.toml (Streamlit).")
 
 # --- Setup embeddings ---
 embeddings = GoogleGenerativeAIEmbeddings(
@@ -25,9 +26,15 @@ embeddings = GoogleGenerativeAIEmbeddings(
     google_api_key=GOOGLE_API_KEY
 )
 
-# --- Load persisted Chroma DB (from ingest.py) ---
+# --- Load persisted Chroma DB ---
 db = Chroma(
-    persist_directory="chroma_db"
+    persist_directory="chroma_db",
+    embedding_function=embeddings,
+    client_settings=Settings(
+        anonymized_telemetry=False,
+        is_persistent=True,
+        allow_reset=True
+    )
 )
 
 # --- Setup LLM ---
@@ -45,15 +52,12 @@ st.set_page_config(page_title="Company Policy Assistant", page_icon="🏢", layo
 
 # Sidebar
 with st.sidebar:
-    st.image("https://img.icons8.com/office/80/organization.png", width=80)  
+    st.image("https://img.icons8.com/office/80/organization.png", width=80)
     st.markdown("## 🏢 Company Policy Assistant")
     st.markdown("Ask questions about your company's policies (HR, IT, Expenses, etc.)")
     st.markdown("---")
     st.markdown(
-        "**Instructions:**\n"
-        "1. Type a question below\n"
-        "2. Get instant AI-powered answers\n"
-        "3. Use for HR, IT, PTO, Expense & Remote work queries"
+        "**Instructions:**\n1. Type a question below\n2. Get instant AI-powered answers\n3. Use for HR, IT, PTO, Expense & Remote work queries"
     )
 
 # Title
@@ -76,3 +80,4 @@ for chat in st.session_state.history:
         st.markdown(chat["question"])
     with st.chat_message("assistant"):
         st.markdown(chat["answer"])
+
