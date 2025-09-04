@@ -1,6 +1,5 @@
 import os
 import streamlit as st
-from dotenv import load_dotenv
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
@@ -14,8 +13,14 @@ except RuntimeError:
     asyncio.set_event_loop(asyncio.new_event_loop())
 
 # --- Load environment variables ---
-load_dotenv()
-GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
+try:
+    # Use st.secrets for Streamlit deployment
+    GOOGLE_API_KEY = st.secrets["GEMINI_API_KEY"]
+except KeyError:
+    # Fallback for local development
+    from dotenv import load_dotenv
+    load_dotenv()
+    GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GOOGLE_API_KEY:
     raise ValueError("❌ GEMINI_API_KEY not found. Add it in .env (local) or secrets.toml (Streamlit).")
@@ -80,4 +85,3 @@ for chat in st.session_state.history:
         st.markdown(chat["question"])
     with st.chat_message("assistant"):
         st.markdown(chat["answer"])
-

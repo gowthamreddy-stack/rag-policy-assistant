@@ -1,5 +1,5 @@
 import os
-from dotenv import load_dotenv
+import streamlit as st
 from langchain_community.vectorstores import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -7,8 +7,14 @@ from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from chromadb.config import Settings
 
 # --- Load environment variables ---
-load_dotenv()
-GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
+try:
+    # Use st.secrets for Streamlit deployment
+    GOOGLE_API_KEY = st.secrets["GEMINI_API_KEY"]
+except KeyError:
+    # Fallback for local development
+    from dotenv import load_dotenv
+    load_dotenv()
+    GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GOOGLE_API_KEY:
     raise ValueError("❌ GEMINI_API_KEY not found. Add it in .env (local) or secrets.toml (Streamlit).")
