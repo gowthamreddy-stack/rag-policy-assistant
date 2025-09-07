@@ -6,6 +6,11 @@ from langchain.chains import RetrievalQA
 from chromadb.config import Settings
 import asyncio
 
+# --- Fix for chromadb/sqlite3 on Streamlit Cloud ---
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 # --- Fix event loop issue for Streamlit ---
 try:
     asyncio.get_running_loop()
@@ -62,7 +67,7 @@ with st.sidebar:
     st.markdown("Ask questions about your company's policies (HR, IT, Expenses, etc.)")
     st.markdown("---")
     st.markdown(
-        "**Instructions:**\n1. Type a question below\n2. Get instant AI-powered answers\n3. Use for HR, IT, PTO, Expense & Remote work queries"
+        "**Instructions:**\\n1. Type a question below\\n2. Get instant AI-powered answers\\n3. Use for HR, IT, PTO, Expense & Remote work queries"
     )
 
 # Title
@@ -72,16 +77,3 @@ st.write("Your AI assistant for quick answers about company policies.")
 # --- Chat Interface ---
 if "history" not in st.session_state:
     st.session_state.history = []
-
-query = st.chat_input("Ask a question about company policies...")
-
-if query:
-    answer = qa.run(query)
-    st.session_state.history.append({"question": query, "answer": answer})
-
-# Display chat history
-for chat in st.session_state.history:
-    with st.chat_message("user"):
-        st.markdown(chat["question"])
-    with st.chat_message("assistant"):
-        st.markdown(chat["answer"])
