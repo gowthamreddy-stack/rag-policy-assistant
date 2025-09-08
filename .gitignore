@@ -1,3 +1,19 @@
-venv/
+# Python
 __pycache__/
-.env
+*.pyc
+*.pyo
+*.pyd
+*.DS_Store
+*.so
+
+# Virtual environment
+venv/
+.env/
+
+# Streamlit & Chroma DB
+chroma_db/
+docs/__pycache__/
+
+# Hugging Face cache
+.cache/
+huggingface/
