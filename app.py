@@ -17,6 +17,14 @@ try:
     sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 except ImportError:
     pass  # on local Windows, sqlite3 already exists
+<<<<<<< HEAD
+=======
+
+# --- Fix for chromadb/sqlite3 on Streamlit Cloud ---
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+>>>>>>> abcf4cc
 
 # --- Fix event loop issue for Streamlit ---
 try:
@@ -92,12 +100,14 @@ with st.sidebar:
     st.markdown("Ask questions about your company's policies (HR, IT, Expenses, etc.)")
     st.markdown("---")
     st.markdown(
-        "**Instructions:**\n1. Type a question below\n2. Get instant AI-powered answers\n3. Use for HR, IT, PTO, Expense & Remote work queries"
+        "**Instructions:**\\n1. Type a question below\\n2. Get instant AI-powered answers\\n3. Use for HR, IT, PTO, Expense & Remote work queries"
     )
 
 # --- Chat Interface ---
 if "history" not in st.session_state:
     st.session_state.history = []
+<<<<<<< HEAD
+=======
 
 prompt = st.chat_input("Ask a question about your company policies...")
 
@@ -115,3 +125,7 @@ if prompt:
 for message in st.session_state.history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+<<<<<<< HEAD
+=======
+>>>>>>> 7548062 (Initial commit for Streamlit deployment)
+>>>>>>> abcf4cc
