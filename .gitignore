@@ -3,17 +3,15 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.DS_Store
 *.so
 
 # Virtual environment
 venv/
 .env/
 
-# Streamlit & Chroma DB
+# Local database
 chroma_db/
-docs/__pycache__/
 
-# Hugging Face cache
+# Hugging Face / Gemini cache
 .cache/
-huggingface/
+
